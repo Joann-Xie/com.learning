@@ -12,16 +12,14 @@ public class Token {
 	private long ctime;
 	private String token;
     private static MemCacheDB mcc;
+    private String username;
 	
-    public Token() throws SQLException{
+    public Token(String username) throws SQLException{
+    	this.username = username;
     	mcc = MemCacheDB.getInstance();
     	this.token = generateToken();
     }
 
-	public Token(String token) throws SQLException{
-		mcc =  MemCacheDB.getInstance();
-        this.token = token;
-	}
 
 	public long getCtime() {
 		return ctime;
@@ -41,11 +39,11 @@ public class Token {
 		refreshToken(token, curtime);
 		return token;
 	}
-	
+
 	public void refreshToken(String token, long curtime){
-		String ctimesql = "select ctime from " + Constants.CRED_TABLE + " where token=\'" + token + "\'";
-		String tokensql = "select token from " + Constants.CRED_TABLE + " where token=\'" + token + "\'";
-		String sqlcmd = "update " + Constants.CRED_TABLE + " set ctime=" + curtime + " where token=\'" + token +"\'";
+		String ctimesql = "select ctime from " + Constants.CRED_TABLE + " where username=\'" + this.username + "\'";
+		String tokensql = "select token from " + Constants.CRED_TABLE + " where username=\'" + this.username + "\'";
+		String sqlcmd = "update " + Constants.CRED_TABLE + " set ctime=" + curtime + ", token=\'" + token + "\' where username=\'" + this.username +"\'";
 		String ctimeKey = mcc.generateKey(ctimesql);
 		String tokenKey = mcc.generateKey(tokensql);
 		if(mcc.keyExist(ctimeKey)){
@@ -66,7 +64,7 @@ public class Token {
 	}
 	public boolean tokenExist() throws SQLException{
 		boolean exist = false;
-		String sqlcmd = "select token from " + Constants.CRED_TABLE + " where token=" + "\'" + this.token + "\'";
+		String sqlcmd = "select token from " + Constants.CRED_TABLE + " where username=" + "\'" + this.username + "\'";
 		String tokenKey = mcc.generateKey(sqlcmd);
 		Object token = mcc.getValue(tokenKey);
 		if(token == null){
@@ -83,7 +81,7 @@ public class Token {
 	public boolean tokenExpired() throws SQLException{
 		boolean expired = true;
 		long curtime = System.currentTimeMillis();
-		String sqlcmd = "select ctime from " + Constants.CRED_TABLE + " where token=" + "\'" + this.token + "\'";
+		String sqlcmd = "select ctime from " + Constants.CRED_TABLE + " where username=" + "\'" + this.username + "\'";
 		String ctimeKey = mcc.generateKey(sqlcmd);
 		Object tokenCtimeObj = mcc.getValue(ctimeKey);
 		long tokenCtime;

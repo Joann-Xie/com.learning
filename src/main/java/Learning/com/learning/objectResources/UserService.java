@@ -25,12 +25,13 @@ public class UserService {
 		mcc = MemCacheDB.getInstance();
 	}
 	
-	public boolean isUserExist(){
-		String sqlcmd = "select name from " + Constants.CRED_TABLE + " where name=\'" + this.username + "\'";
-		String userKey = this.username + "_username";
+	public boolean isUserExist() throws SQLException{
+		String sqlcmd = "select username from " + Constants.CRED_TABLE + " where username=\'" + this.username + "\'";
+		MemCacheDB mcc = MemCacheDB.getInstance();
+		String mccKey = mcc.generateKey(sqlcmd);
 		boolean exist = false;
 		try{
-			if(mcc.keyExist(userKey)){
+			if(mcc.keyExist(mccKey)){
 				return true;
 			} else {
 				ResultSet rs = mcc.getDbcon().query(sqlcmd);
@@ -46,7 +47,7 @@ public class UserService {
 	
 	public boolean authenticate(){
 		boolean valid = false;
-		String sqlcmd = "select password from " + Constants.CRED_TABLE + " where name=\'" + this.username + "\'";
+		String sqlcmd = "select password from " + Constants.CRED_TABLE + " where username=\'" + this.username + "\'";
 		String userKey = this.username + "_password";
 
 		try{
@@ -79,7 +80,7 @@ public class UserService {
 				JSONObject resp = new JSONObject();
 				resp.put("test-token", token);
 				//return Response.ok(resp.toString()).build();
-				return Response.ok().header("test-token", token).build();
+				return Response.ok().header(Constants.TOKEN_KEY, token).build();
 			} else {
 				return Response.status(ReturnCode.INVALID_USER).build();
 			}

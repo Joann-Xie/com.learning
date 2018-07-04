@@ -71,7 +71,7 @@ public class EmployeeService {
 			return Response.status(ReturnCode.AUTHENTICATION_FAILURE).build();
 		}else{
 			JSONObject json = new JSONObject();
-			String sqlcmd = "select username, company. level from " + Constants.EMPLOYEE_TABLE + " where id=" + instId;
+			String sqlcmd = "select username, company, level from " + Constants.EMPLOYEE_TABLE + " where id=\'" + instId + "\'";
 			MemCacheDB mcc = MemCacheDB.getInstance();
 			String mccKey = mcc.generateKey(sqlcmd);
 			if(mcc.keyExist(mccKey)) {
@@ -81,7 +81,7 @@ public class EmployeeService {
 			} else {
 				ResultSet rs = mcc.getDbcon().query(sqlcmd);
 				if(rs.next()) {
-					json.put("username", rs.getShort("username"));
+					json.put("username", rs.getString("username"));
 					json.put("company", rs.getString("company"));
 					json.put("level", rs.getInt("level"));
 				}

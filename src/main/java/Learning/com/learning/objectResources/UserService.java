@@ -10,8 +10,8 @@ import org.codehaus.jettison.json.JSONObject;
 
 //import org.glassfish.grizzly.http.server.Response;
 
-import DBUtils.DBConnection;
 import DBUtils.MemCacheDB;
+import UserExceptions.InternalError;
 import constants.ReturnCode;
 import constants.Constants;
 
@@ -72,11 +72,10 @@ public class UserService {
 		return valid;
 	}
 
-	public Response login(){
+	public Response login() throws InternalError, SQLException{
 		try{
 			if(authenticate()){
-				Token tokenInst = new Token(this.username);
-				String token = tokenInst.getToken();
+				String token = Token.generateToken(username);
 				JSONObject resp = new JSONObject();
 				resp.put("test-token", token);
 				//return Response.ok(resp.toString()).build();
@@ -85,8 +84,6 @@ public class UserService {
 				return Response.status(ReturnCode.INVALID_USER).build();
 			}
 		}catch(JSONException e){
-			e.printStackTrace();
-		}catch(SQLException e){
 			e.printStackTrace();
 		}
 		return Response.status(ReturnCode.GENERAL_ERR).build();

@@ -1,8 +1,13 @@
 package Learning.com.learning.objectResources;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Random;
+import UserExceptions.InternalError;
+
+import javax.xml.bind.DatatypeConverter;
+
 
 import DBUtils.MemCacheDB;
 import constants.Constants;
@@ -12,12 +17,10 @@ public class Token {
 	private long ctime;
 	private String token;
     private static MemCacheDB mcc;
-    private String username;
 	
-    public Token(String username) throws SQLException{
-    	this.username = username;
+    public Token(String token) throws SQLException{
     	mcc = MemCacheDB.getInstance();
-    	this.token = generateToken();
+    	this.token = token;
     }
 
 
@@ -33,17 +36,30 @@ public class Token {
 	public void setToken(String token) {
 		this.token = token;
 	}
-	public String generateToken(){
+	public static String generateToken(String key) throws InternalError, SQLException {
 		long curtime = System.currentTimeMillis();
-		String token = genRandom() + curtime;
-		refreshToken(token, curtime);
+		String token = "";
+		//String token = genRandom() + curtime;
+		try {
+			MessageDigest md = MessageDigest.getInstance("MD5");
+			md.update(key.getBytes());
+			byte[] bytes = md.digest();
+			token = DatatypeConverter.printHexBinary(bytes) + curtime;
+			refreshToken(key, token, curtime);
+		} catch(NoSuchAlgorithmException e){
+			//TODO Add log
+			throw new InternalError("Internal error detected");
+		}
 		return token;
 	}
 
-	public void refreshToken(String token, long curtime){
-		String ctimesql = "select ctime from " + Constants.CRED_TABLE + " where username=\'" + this.username + "\'";
-		String tokensql = "select token from " + Constants.CRED_TABLE + " where username=\'" + this.username + "\'";
-		String sqlcmd = "update " + Constants.CRED_TABLE + " set ctime=" + curtime + ", token=\'" + token + "\' where username=\'" + this.username +"\'";
+	public static void refreshToken(String username, String token, long curtime) throws SQLException{
+		String ctimesql = "select ctime from " + Constants.CRED_TABLE + " where username=\'" + username + "\'";
+		String tokensql = "select token from " + Constants.CRED_TABLE + " where username=\'" + username + "\'";
+		String sqlcmd = "update " + Constants.CRED_TABLE + " set ctime=" + curtime + ", token=\'" + token + "\' where username=\'" + username +"\'";
+		if(mcc == null) {
+			mcc = MemCacheDB.getInstance();
+		}
 		String ctimeKey = mcc.generateKey(ctimesql);
 		String tokenKey = mcc.generateKey(tokensql);
 		if(mcc.keyExist(ctimeKey)){
@@ -62,26 +78,26 @@ public class Token {
 			e.printStackTrace();
 		}
 	}
-	public boolean tokenExist() throws SQLException{
-		boolean exist = false;
-		String sqlcmd = "select token from " + Constants.CRED_TABLE + " where username=" + "\'" + this.username + "\'";
-		String tokenKey = mcc.generateKey(sqlcmd);
-		Object token = mcc.getValue(tokenKey);
-		if(token == null){
-			ResultSet rs = mcc.getDbcon().query(sqlcmd);
-			if(rs.next()){
-				exist = true;
-			}
-		} else {
-			exist = true;
-		}
-		return exist;
-	}
+//	public boolean tokenExist() throws SQLException{
+//		boolean exist = false;
+//		String sqlcmd = "select token from " + Constants.CRED_TABLE + " where token=" + "\'" + this.token + "\'";
+//		String tokenKey = mcc.generateKey(sqlcmd);
+//		Object token = mcc.getValue(tokenKey);
+//		if(token == null){
+//			ResultSet rs = mcc.getDbcon().query(sqlcmd);
+//			if(rs.next()){
+//				exist = true;
+//			}
+//		} else {
+//			exist = true;
+//		}
+//		return exist;
+//	}
 	
 	public boolean tokenExpired() throws SQLException{
 		boolean expired = true;
 		long curtime = System.currentTimeMillis();
-		String sqlcmd = "select ctime from " + Constants.CRED_TABLE + " where username=" + "\'" + this.username + "\'";
+		String sqlcmd = "select ctime from " + Constants.CRED_TABLE + " where token=" + "\'" + this.token + "\'";
 		String ctimeKey = mcc.generateKey(sqlcmd);
 		Object tokenCtimeObj = mcc.getValue(ctimeKey);
 		long tokenCtime;
@@ -105,33 +121,33 @@ public class Token {
 		return expired;
 	}
 	
-	private String genRandom(){
-		int len = 20;
-		Random random = new Random();
-		String str = "";
-		
-		for(int idx = 0; idx < len; idx++){
-			int r1 = random.nextInt(3);
-			int r2 = 0;
-			char cc = ' ';
-			switch(r1){
-			case 0:
-				r2 = random.nextInt(10);
-				cc = (char) (r2 + 48);
-				break;
-			case 1:
-				r2 = random.nextInt(26);
-				cc = (char) (r2 + 65);
-				break;
-			case 2:
-				r2 = random.nextInt(26);
-				cc = (char)(r2 + 97);
-				break;
-			}
-			str += String.valueOf(cc);
-		}
-		return str;
-	}
+//	private String genRandom(){
+//		int len = 20;
+//		Random random = new Random();
+//		String str = "";
+//		
+//		for(int idx = 0; idx < len; idx++){
+//			int r1 = random.nextInt(3);
+//			int r2 = 0;
+//			char cc = ' ';
+//			switch(r1){
+//			case 0:
+//				r2 = random.nextInt(10);
+//				cc = (char) (r2 + 48);
+//				break;
+//			case 1:
+//				r2 = random.nextInt(26);
+//				cc = (char) (r2 + 65);
+//				break;
+//			case 2:
+//				r2 = random.nextInt(26);
+//				cc = (char)(r2 + 97);
+//				break;
+//			}
+//			str += String.valueOf(cc);
+//		}
+//		return str;
+//	}
 	public int getLife() {
 		return life;
 	}
